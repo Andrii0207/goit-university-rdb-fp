@@ -1,0 +1,92 @@
+1. --------------------------------
+
+USE pandemic;
+
+SELECT * 
+FROM infectious_cases;
+
+2. --------------------------------
+
+USE pandemic;
+DROP TABLE IF EXISTS countries;
+DROP TABLE IF EXISTS countries_normalized;
+
+CREATE TABLE countries(
+id INT PRIMARY KEY AUTO_INCREMENT,
+country_name VARCHAR(45),
+country_code VARCHAR(15) Not NULL UNIQUE
+);
+
+CREATE TABLE countries_normalized (
+id INT PRIMARY KEY AUTO_INCREMENT,
+country_id INT,
+year INT,
+Number_yaws TEXT,
+polio_cases INT,
+cases_guinea_worm INT,
+Number_rabies TEXT,
+Number_malaria TEXT, 
+Number_hiv TEXT,
+Number_tuberculosis TEXT,
+Number_smallpox TEXT,
+Number_cholera_cases TEXT,
+FOREIGN KEY (country_id) REFERENCES countries(id)
+);
+
+INSERT INTO countries (country_name, country_code)
+SELECT DISTINCT Entity, Code FROM infectious_cases;
+
+INSERT INTO countries_normalized (country_id, year, Number_yaws, polio_cases, cases_guinea_worm, Number_rabies, 
+Number_malaria, Number_hiv, Number_tuberculosis, Number_smallpox, Number_cholera_cases)
+SELECT (SELECT id FROM countries WHERE infectious_cases.Entity=countries.country_name) country_id, year, Number_yaws, polio_cases, 
+cases_guinea_worm, Number_rabies, Number_malaria, Number_hiv, Number_tuberculosis, Number_smallpox, Number_cholera_cases
+FROM infectious_cases;
+
+SELECT * FROM countries_normalized;
+
+3. --------------------------------
+
+USE pandemic;
+
+SELECT id, AVG(Number_rabies) AS avg_Number_rabies, MIN(Number_rabies) AS min_Number_rabies, 
+MAX(Number_rabies) AS max_Number_rabies, SUM(Number_rabies) AS sum_Number_rabies
+FROM countries_normalized
+WHERE Number_rabies <> ''
+GROUP BY id
+ORDER BY avg_Number_rabies DESC
+LIMIT 10;
+
+4. --------------------------------
+
+USE pandemic;
+
+SELECT id, year, MAKEDATE(year, 1) AS full_date, CURDATE() AS curr_date, 
+TIMESTAMPDIFF(year, MAKEDATE(year, 1), CURDATE()) AS diff_year
+FROM countries_normalized;
+
+5. --------------------------------
+
+USE pandemic;
+
+DROP FUNCTION IF EXIST calculateDiffYear
+
+DELIMITER //
+
+CREATE FUNCTION calculateDiffYear(year INT)
+RETURNS INT
+DETERMINISTIC
+NO SQL
+BEGIN
+	DECLARE diff_year INT;
+    SET diff_year = TIMESTAMPDIFF(year, MAKEDATE(year,1), CURDATE());
+    RETURN diff_year;
+END //
+
+DELIMITER ;
+
+SELECT id, year, calculateDiffYear(year) as diff_year
+FROM countries_normalized;
+
+
+
+
